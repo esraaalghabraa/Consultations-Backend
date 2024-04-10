@@ -121,7 +121,7 @@ class AuthUserController extends Controller
             return $this->failedResponse();
         }
         $user->update([
-            'password' => Hash::make($request->password)
+            'otp' => $otp
         ]);
         $user->save();
 
