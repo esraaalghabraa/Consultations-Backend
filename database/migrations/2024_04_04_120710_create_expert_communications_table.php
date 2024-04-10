@@ -11,10 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('expert_recommendations', function (Blueprint $table) {
+        Schema::create('expert_communications', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('expert_id')->constrained('experts');
-            $table->foreignId('user_id')->constrained('users');
+            $table->bigInteger('cost_appointment');
+            $table->foreignId('expert_id')->constrained('experts')->onDelete('cascade');
+            $table->foreignId('communication_type_id')->constrained('communication_types')->onDelete('cascade');
+            $table->softDeletes();
             $table->timestamps();
         });
     }
@@ -24,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('expert_recommendations');
+        Schema::dropIfExists('expert_communications');
     }
 };

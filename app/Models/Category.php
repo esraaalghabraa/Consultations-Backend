@@ -10,19 +10,23 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Category extends Model
 {
     use HasFactory, SoftDeletes;
-    protected $guarded=[];
 
-    protected function image(): Attribute{
+    protected $guarded = [];
+
+    protected function image(): Attribute
+    {
         return Attribute::make(
-            get:fn ($value) => ($value != null) ? asset($value) : null
+            get: fn($value) => ($value != null) ? asset($value) : null
         );
     }
 
-    public function subCategories(){
+    public function subCategories()
+    {
         return $this->hasMany(SubCategory::class);
     }
 
-    public function experts(){
+    public function experts()
+    {
         return $this->hasMany(Expert::class);
     }
 }

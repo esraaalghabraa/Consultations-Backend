@@ -11,11 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('expert_ratings', function (Blueprint $table) {
+        Schema::create('favorites', function (Blueprint $table) {
             $table->id();
             $table->foreignId('expert_id')->constrained('experts');
             $table->foreignId('user_id')->constrained('users');
-            $table->double('rating');
             $table->timestamps();
         });
     }
@@ -25,6 +24,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('expert_ratings');
+        Schema::dropIfExists('favorites');
     }
 };

@@ -9,10 +9,17 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Experience extends Model
 {
     use HasFactory, SoftDeletes;
-    protected $guarded=[];
-    protected $hidden=['pivot'];
 
-    public function experts(){
-        return $this->belongsToMany(Expert::class,'expert_experiences');
+    protected $guarded = [];
+    protected $hidden = ['pivot'];
+
+    public function experts()
+    {
+        return $this->belongsToMany(Expert::class, 'expert_experiences');
+    }
+
+
+    public function experienceYears(){
+        return $this->hasOne(ExpertExperience::class);
     }
 }
