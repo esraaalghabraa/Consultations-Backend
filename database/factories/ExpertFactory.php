@@ -25,8 +25,7 @@ class ExpertFactory extends Factory
             'address'=>fake()->country(),
             'about'=>fake()->text(30),
             'rating'=>rand(1,5),
-            'min_range'=>rand(5,9),
-            'max_range'=>rand(10,50),
+            'recommended_number'=>rand(1,100),
             'category_id'=>rand(1,10)
         ];
     }

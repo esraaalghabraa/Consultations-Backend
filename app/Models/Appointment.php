@@ -9,11 +9,12 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Appointment extends Model
 {
     use HasFactory, SoftDeletes;
-    protected $guarded=[];
+
+    protected $guarded = [];
 
     public function date()
     {
-        $this->belongsTo(ExpertDate::class,'date_id');
+        $this->hasOne(ExpertDate::class, 'date_id');
     }
 
     public function user()
@@ -21,8 +22,13 @@ class Appointment extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function expert()
+    {
+        return $this->belongsTo(Expert::class);
+    }
+
     public function communicationType()
     {
-        return $this->belongsTo(CommunicationType::class,'communication_type_id');
+        return $this->belongsTo(CommunicationType::class, 'communication_type_id');
     }
 }

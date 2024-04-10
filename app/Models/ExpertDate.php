@@ -9,14 +9,29 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class ExpertDate extends Model
 {
     use HasFactory, SoftDeletes;
-    protected $guarded=[];
 
-    public function expert(){
+    protected $guarded = [];
+    protected $table = 'expert_dates';
+    protected $hidden = ['expert_id', 'day_id', 'hour_id', 'deleted_at', 'created_at', 'updated_at'];
+
+    public function appointment()
+    {
+        $this->belongsTo(Appointment::class);
+    }
+
+    public function expert()
+    {
         return $this->belongsTo(Expert::class);
     }
-    public function hour(){
+
+    public function hour()
+    {
         return $this->belongsTo(Hour::class);
     }
-    public function day(){
+
+    public function day()
+    {
         return $this->belongsTo(Day::class);
-    }}
+    }
+
+}

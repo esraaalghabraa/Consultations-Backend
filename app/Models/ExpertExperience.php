@@ -9,5 +9,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class ExpertExperience extends Model
 {
     use HasFactory, SoftDeletes;
-    protected $guarded=[];
+
+    protected $guarded = [];
+    protected $hidden=['expert_id','experience_id','deleted_at','created_at','updated_at'];
+
+
 }
