@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api\V1\User;
 
 use Illuminate\Routing\Controller;
 use App\Mail\EmailVerification;
-use App\Models\Expert;
 use App\Models\User;
 use App\ResponseTrait;
 use Illuminate\Http\Request;
@@ -94,8 +93,8 @@ class AuthUserController extends Controller
             $user->otp = null;
             $user->save();
         }
-        $user->token = $user->createToken('accessToken', ['user', 'access'], now()->addDay())->plainTextToken;
-        $user->refresh_token = $user->createToken('refreshToken', ['user', 'refresh'], now()->addDays(6))->plainTextToken;
+        $user->token = $user->createToken('accessToken', ['user', 'access'], now()->addDays(6))->plainTextToken;
+        $user->refresh_token = $user->createToken('refreshToken', ['user', 'refresh'], now()->addDays(12))->plainTextToken;
         return $this->successResponse($user);
     }
 
@@ -108,7 +107,7 @@ class AuthUserController extends Controller
         ]);
         if ($validator->fails())
             return $this->failedResponse($validator->errors()->first());
-        $user = Expert::where('email', $request->email)->orWhere('phone', $request->phone)->first();
+        $user = User::where('email', $request->email)->orWhere('phone', $request->phone)->first();
         if (!$user || !Hash::check($request->password, $user->password)) {
             return $this->failedResponse('The provided credentials are incorrect.');
         }
