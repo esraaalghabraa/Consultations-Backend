@@ -5,11 +5,9 @@ namespace App\Http\Controllers\Api\V1\Guest;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Expert;
-use App\Models\SubCategory;
 use App\ResponseTrait;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
-use function Laravel\Prompts\select;
 
 class HomeController extends Controller
 {
@@ -17,7 +15,7 @@ class HomeController extends Controller
 
     public function getHomeDate()
     {
-        $categories = Category::get();
+        $categories = Category::whereHas('experts')->get();
         $highestRecommendedExperts = Expert::
         where('recommended_number', '>', 0)
             ->orderByDesc('recommended_number')
@@ -29,68 +27,62 @@ class HomeController extends Controller
             ->limit(10)
             ->get();
         return $this->successResponse([
-            'categories' => $categories,
-            'highestRecommendedExperts' => $highestRecommendedExperts,
-            'highestRatedExperts' => $highestRatedExperts,
+            'categories' => $categories??[],
+            'highestRecommendedExperts' => $highestRecommendedExperts??[],
+            'highestRatedExperts' => $highestRatedExperts??[],
         ]);
     }
 
-    public function getRecommendedExperts(Request $request)
-    {
-        $records = $request->records_number ?? 10;
-        $highestRecommendedExperts = Expert::
-        where('recommended_number', '>', 0)
-            ->orderByDesc('recommended_number')
-            ->latest()->paginate($records);
-        return $this->successResponse($highestRecommendedExperts);
-    }
-
-    public function getTopExperts()
-    {
-        $records = $request->records_number ?? 10;
-        $highestRatedExperts = Expert::
-        where('rating', '>', 2)
-            ->orderByDesc('rating')
-            ->latest()->paginate($records);
-        return $this->successResponse($highestRatedExperts);
-    }
-
-    public function getSubCategoriesWithExperts(Request $request)
+    public function getMainCategoryDetails(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'category_id' => ['required', 'exists:categories,id,deleted_at,NULL'],
         ]);
         if ($validator->fails())
             return $this->failedResponse($validator->errors()->first());
-        $sub_categories = SubCategory::query()->where('category_id', $request->category_id);
-
-        $sub_categories_list = $sub_categories->get();
-        $sub_categories_with_experts = $sub_categories->with('experts')->get();
-        $experts_list = $sub_categories_with_experts->flatMap(function ($element) {
-            return $element->experts;
-        });
+        $category = Category::with('subCategories')->with('experts')->find($request->category_id);
         return $this->successResponse([
-            'sub_categories' => $sub_categories_list,
-            'experts' => $experts_list,
+            'sub_categories' => $category->sub_categories??[],
+            'experts' => $category->experts??[],
         ]);
     }
 
-    public function getSubCategoryExperts(Request $request)
+
+    function getExperts(Request $request)
     {
+        $limit = $request->limit ? $request->limit : 10;
+        $page = $request->page ? $request->page : null;
         $validator = Validator::make($request->all(), [
-            'sub_category_id' => ['required', 'exists:sub_categories,id,deleted_at,NULL'],
+            'experts_type' => ['required', 'string', 'max:255'],
+            'main_category_id' => ['exists:categories,id'],
+            'sub_category_id' => ['exists:sub_categories,id'],
         ]);
         if ($validator->fails())
             return $this->failedResponse($validator->errors()->first());
-
-        $sub_categories = SubCategory::with('experts')
-            ->find($request->sub_category_id);
-        return $this->successResponse($sub_categories->experts);
-
+        $experts = Expert::query();
+        if ($request->main_category_id) {
+            $experts = $experts->where('category_id', $request->main_category_id);
+        }
+        if ($request->sub_category_id) {
+            $experts = $experts->whereHas('subCategories', function ($query) use ($request) {
+                $query->where('sub_categories.id', $request->sub_category_id);
+            });
+        }
+        if ($request->experts_type == 'recommended_experts') {
+            $experts = $experts->where('recommended_number', '>', 0)
+                ->orderByDesc('recommended_number');
+        }
+        if ($request->experts_type == 'top_experts') {
+            $experts = $experts->where('rating', '>', 2)
+                ->orderByDesc('rating');
+        }
+        return $this->successResponse($experts->paginate($limit, ['*'], 'page', $page));
     }
 
     public function search(Request $request)
     {
+        $limit = $request->limit ? $request->limit : 10;
+        $page = $request->page ? $request->page : null;
         $validator = Validator::make($request->all(), [
             'query' => ['required', 'string', 'max:255'],
         ]);
@@ -100,17 +92,17 @@ class HomeController extends Controller
         $searchQuery = $request->input('query');
 
         // Search for experts based on department name or expertise name
-        $experts = Expert::where('full_name', 'like',  $searchQuery )
+        $experts = Expert::query();
+        $experts = $experts->where('full_name', 'like', '%' . $searchQuery . '%')
             ->orWhereHas('category', function ($query) use ($searchQuery) {
-                $query->where('name', 'like',  $searchQuery );
+                $query->where('name', 'like', '%' . $searchQuery . '%');
             })->orWhereHas('subCategories', function ($query) use ($searchQuery) {
-                $query->where('name', 'like',  $searchQuery );
+                $query->where('name', 'like', '%' . $searchQuery . '%');
             })->orWhereHas('experiences', function ($query) use ($searchQuery) {
-                $query->where('name', 'like',  $searchQuery );
-            })
-            ->get();
+                $query->where('name', 'like', '%' . $searchQuery . '%');
+            });
 
-        return $this->successResponse($experts);
+        return $this->successResponse($experts->paginate($limit, ['*'], 'page', $page));
     }
 
 
@@ -121,8 +113,8 @@ class HomeController extends Controller
         ]);
         if ($validator->fails())
             return $this->failedResponse();
-        $expert = Expert::with(['experiences'=>function($q){
-            return $q->select('experiences.id','name')->with('experienceYears');
+        $expert = Expert::with(['experiences' => function ($q) {
+            return $q->select('experiences.id', 'name')->with('experienceYears');
         }])
             ->with(['subCategories' => function ($qu) {
                 return $qu->select('sub_categories.id', 'name');
