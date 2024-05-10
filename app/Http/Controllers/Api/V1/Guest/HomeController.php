@@ -15,7 +15,7 @@ class HomeController extends Controller
 
     public function getHomeDate()
     {
-        $categories = Category::whereHas('experts')->get();
+        $categories = Category::whereHas('subCategories')->with('subCategories')->whereHas('experts')->get();
         $highestRecommendedExperts = Expert::
         where('recommended_number', '>', 0)
             ->orderByDesc('recommended_number')
