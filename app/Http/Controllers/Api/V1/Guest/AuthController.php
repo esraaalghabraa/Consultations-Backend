@@ -1,53 +1,75 @@
 <?php
 
-namespace App\Http\Controllers\Api\V1\User;
+namespace App\Http\Controllers\Api\V1\Guest;
 
-use Illuminate\Routing\Controller;
 use App\Mail\EmailVerification;
+use App\Models\Role;
 use App\Models\User;
 use App\ResponseTrait;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Controller;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 
-class AuthUserController extends Controller
+class AuthController extends Controller
 {
     use ResponseTrait;
 
     public function __construct()
     {
         $this->middleware(['auth:sanctum', 'abilities:user,access'])
-            ->except(['register', 'sendCode', 'verifiedEmail', 'login', 'refreshToken']);
+            ->except(['register', 'sendCode', 'verifiedEmail', 'login', 'refreshToken', 'getUser']);
         $this->middleware(['auth:sanctum', 'ability:user,refresh'])->only('refreshToken');
     }
 
     public function register(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'full_name' => ['required', 'string', 'min:6', 'max:20'],
+            'first_name' => ['required', 'string', 'min:6', 'max:20'],
+            'last_name' => ['required', 'string', 'min:6', 'max:20'],
             'email' => ['required', 'string', 'email', 'unique:users,email'],
-            'phone' => ['required', 'string', 'min:10', 'max:15', 'unique:users,phone'],
-            'password' => ['required', 'string', 'min:6', 'max:20']
+            'password' => ['required', 'string', 'min:6', 'max:20'],
+            'is_expert' => ['required', 'boolean']
         ]);
         if ($validator->fails())
             return $this->failedResponse($validator->errors()->first());
         $otp = mt_rand(100000, 999999);
-        $details = ['full_name' => $request->full_name, 'otp' => $otp];
+        $details = ['full_name' => $request->first_name, 'otp' => $otp];
         try {
             Mail::to($request->email)->send(new EmailVerification($details));
         } catch (\Exception $exception) {
             return $this->failedResponse();
         }
-        User::create([
+        $user = User::create([
             'full_name' => $request->full_name,
             'email' => $request->email,
-            'phone' => $request->phone,
             'password' => Hash::make($request->password),
             'otp' => $otp
         ]);
+        if ($request->is_expert)
+            $role = Role::where('name', 'expert')->first();
+        else
+            $role = Role::where('name', 'customer')->first();
+        $user->addRole($role);
         return $this->successResponse();
+    }
+
+    public function login(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => ['string', 'exists:users,email,deleted_at,NULL'],
+            'password' => ['required', 'string', 'min:6', 'max:20']
+        ]);
+        if ($validator->fails())
+            return $this->failedResponse($validator->errors()->first());
+        if (!auth()->validate($request->only('password', 'email'))) {
+            return $this->failedResponse('The provided credentials are incorrect.');
+        }
+        $user = User::where('email', $request->email)->first();
+        return $this->getUser($user);
     }
 
     public function sendCode(Request $request)
@@ -58,15 +80,23 @@ class AuthUserController extends Controller
         if ($validator->fails())
             return $this->failedResponse($validator->errors()->first());
         $user = User::where('email', $request->email)->first();
+        $currentTime = now();
+        // Check if the user is allowed to request a new OTP
+        if ($user->otp_last_sent_at && $currentTime->lessThan($this->calculateNextAllowedTime($user))) {
+            return $this->failedResponse('You must wait before requesting a new OTP');
+        }
+        // Generate OTP
         $otp = mt_rand(100000, 999999);
-        $details = ['full_name' => $user->full_name, 'otp' => $otp];
+        $details = ['full_name' => $user->first_name, 'otp' => $otp];
         try {
             Mail::to($request->email)->send(new EmailVerification($details));
         } catch (\Exception $exception) {
             return $this->failedResponse();
         }
         $user->update([
-            'otp' => $otp
+            'otp' => $otp,
+            'otp_last_sent_at' => $currentTime,
+            'otp_resend_count' => $user->otp_resend_count + 1,
         ]);
         $user->save();
         return $this->successResponse();
@@ -80,12 +110,9 @@ class AuthUserController extends Controller
         ]);
         if ($validator->fails())
             return $this->failedResponse($validator->errors()->first());
-        $user = User::where('email', $request->email)->first();
-        if ($user->updated_at < now()->subMinutes(15)) {
+        $user = User::where('email', $request->email)->where('otp', $request->otp)->first();
+        if ($user->otp_last_sent_at < now()->subMinutes(15)) {
             $user->otp = null;
-            return $this->failedResponse('Invalid code');
-        }
-        if ($user->otp === $request->code) {
             return $this->failedResponse('Invalid code');
         }
         if (!$user->markEmailAsVerified()) {
@@ -93,49 +120,12 @@ class AuthUserController extends Controller
             $user->otp = null;
             $user->save();
         }
-        $user->token = $user->createToken('accessToken', ['user', 'access'], now()->addDays(6))->plainTextToken;
-        $user->refresh_token = $user->createToken('refreshToken', ['user', 'refresh'], now()->addDays(12))->plainTextToken;
-        return $this->successResponse($user);
-    }
-
-    public function login(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'email' => ['string', 'exists:users,email,deleted_at,NULL'],
-            'phone' => ['string', 'exists:users,phone,deleted_at,NULL'],
-            'password' => ['required', 'string', 'min:6', 'max:20']
-        ]);
-        if ($validator->fails())
-            return $this->failedResponse($validator->errors()->first());
-        $user = User::where('email', $request->email)->orWhere('phone', $request->phone)->first();
-        if (!$user || !Hash::check($request->password, $user->password)) {
-            return $this->failedResponse('The provided credentials are incorrect.');
-        }
-
-        $otp = mt_rand(100000, 999999);
-        $details = ['full_name' => $user->full_name, 'otp' => $otp];
-        try {
-            Mail::to($user->email)->send(new EmailVerification($details));
-        } catch (\Exception $exception) {
-            return $this->failedResponse();
-        }
-        $user->update([
-            'otp' => $otp
-        ]);
-        $user->save();
-
-        return $this->successResponse();
+        return $this->getUser($user);
     }
 
     public function resetPassword(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'email' => ['required', 'string', 'exists:users,email,deleted_at,NULL'],
-            'password' => ['required', 'string', 'min:6', 'max:20']
-        ]);
-        if ($validator->fails())
-            return $this->failedResponse($validator->errors()->first());
-        $user = User::where('email', $request->email)->first();
+        $user = Auth::user();
         $user->update([
             'password' => Hash::make($request->password)
         ]);
@@ -159,5 +149,38 @@ class AuthUserController extends Controller
     {
         Auth::user()->currentAccessToken()->delete();
         return $this->successResponse();
+    }
+
+    private function calculateNextAllowedTime(User $user)
+    {
+        $resendCount = $user->otp_resend_count;
+
+        switch ($resendCount) {
+            case 1:
+                return now()->addMinute();
+            case 2:
+                return now()->addMinutes(5);
+            case 3:
+                return now()->addMinutes(15);
+            case 4:
+                return now()->addMinutes(30);
+            case 5:
+                return now()->addHour();
+            default:
+                return now()->addDay();
+        }
+    }
+
+    /**
+     * @param $user
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getUser($user): \Illuminate\Http\JsonResponse
+    {
+        $user->role = $user->roles[0]['name'];
+        Arr::forget($user, 'roles');
+        $user->token = $user->createToken('accessToken', ['user', 'access'], now()->addDays(6))->plainTextToken;
+        $user->refresh_token = $user->createToken('refreshToken', ['user', 'refresh'], now()->addDays(12))->plainTextToken;
+        return $this->successResponse($user);
     }
 }
