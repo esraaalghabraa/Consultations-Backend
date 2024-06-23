@@ -7,13 +7,17 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laratrust\Contracts\LaratrustUser;
+use Laratrust\Traits\HasRolesAndPermissions;
 use Laravel\Sanctum\HasApiTokens;
 
-class User extends Authenticatable
+class User extends Authenticatable implements LaratrustUser
 {
-    use SoftDeletes, HasFactory, Notifiable, HasApiTokens;
+    use HasApiTokens, HasFactory, Notifiable,SoftDeletes,HasRolesAndPermissions;
 
     protected $guarded = [];
+
+    protected $dates = ['otp_last_sent_at'];
 
     protected $hidden = [
         'password',
