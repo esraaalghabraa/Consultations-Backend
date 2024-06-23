@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\Guest;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Expert;
+use App\Models\Hour;
 use App\ResponseTrait;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -47,18 +48,25 @@ class HomeController extends Controller
         ]);
     }
 
-
+    //TODO marge three function(search && getExperts && getExpertDetails)
     function getExperts(Request $request)
     {
         $limit = $request->limit ? $request->limit : 10;
         $page = $request->page ? $request->page : null;
         $validator = Validator::make($request->all(), [
+            'start' => ['required', 'date_format:g,h:i A'],
+            'end' => ['required', 'date_format:g,h:i A','after:start'],
             'experts_type' => ['required', 'string', 'max:255'],
             'main_category_id' => ['exists:categories,id'],
             'sub_category_id' => ['exists:sub_categories,id'],
         ]);
         if ($validator->fails())
             return $this->failedResponse($validator->errors()->first());
+        return Hour::query()->whereBetween('time', [
+            date('G:i a', strtotime($request->start)),
+            date('G:i a', strtotime($request->end))],
+        )->get();
+
         $experts = Expert::query();
         if ($request->main_category_id) {
             $experts = $experts->where('category_id', $request->main_category_id);
