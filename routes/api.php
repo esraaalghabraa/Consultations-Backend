@@ -10,3 +10,6 @@ Route::controller(HomeController::class)->group(function (){
     Route::get('get_expert_details','getExpertDetails');
     Route::get('search','search');
 });
+require __DIR__.'/auth.php';
+require __DIR__.'/customer.php';
+require __DIR__.'/expert.php';
