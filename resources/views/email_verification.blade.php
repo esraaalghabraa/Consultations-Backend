@@ -66,7 +66,7 @@
         <img src="https://adminpanel.microtechdev.com/favicon.png" alt="logo">
     </div>
     <div class="message-content">
-        <p style="direction: rtl">مرحباً {{$user['full_name']}}</p>
+        <p style="direction: rtl">مرحباً {{$user['first_name']}}</p>
         <p style="direction: rtl"> استخدم الكود التالي لتسجيل الدخول في <span style=" font-family: 'SF Pro Text'; ">Consultation</span></p>
         <div class="verification-code">{{$user['otp']}}</div>
         <p style="direction: rtl">لا يمكن الوصول إلى حسابك بدون رمز التحقق هذا، حتى لو لم ترسل هذا الطلب.</p>
