@@ -10,7 +10,7 @@ class Hour extends Model
     use HasFactory;
 
     protected $guarded = [];
-    protected $hidden = ['deleted_at', 'created_at', 'updated_at'];
+    protected $hidden = ['time','deleted_at', 'created_at', 'updated_at'];
 
     public function dates()
     {
