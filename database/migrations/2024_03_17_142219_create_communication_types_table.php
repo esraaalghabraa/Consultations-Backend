@@ -14,7 +14,6 @@ return new class extends Migration
         Schema::create('communication_types', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('cost');
             $table->softDeletes();
             $table->timestamps();
         });

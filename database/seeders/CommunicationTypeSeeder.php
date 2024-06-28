@@ -15,15 +15,12 @@ class CommunicationTypeSeeder extends Seeder
     {
         CommunicationType::create([
             "name" => "message",
-            "cost" => 5
         ]);
         CommunicationType::create([
             "name" => "voice",
-            "cost" => 10
         ]);
         CommunicationType::create([
             "name" => "video",
-            "cost" => 15
         ]);
     }
 }
