@@ -29,7 +29,7 @@ class HomeController extends Controller
     public function getHomeData(): JsonResponse
     {
         // Fetch categories with their subcategories and experts
-        $categories = $this->categoryService->getCategoriesWithSubcategoriesAndExperts();
+        $categories = $this->categoryService->getCategoriesWithSubcategories(true);
 
         // Fetch the highest recommended experts
         $highestRecommendedExperts = $this->expertService->getHighestRecommendedExperts();
