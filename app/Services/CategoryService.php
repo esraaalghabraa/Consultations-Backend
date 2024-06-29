@@ -8,16 +8,21 @@ use Illuminate\Database\Eloquent\Collection;
 class CategoryService
 {
     /**
-     * Retrieve all categories that have subcategories and experts.
+     * Retrieve all categories with their subcategories.
+     * Optionally include only those that have experts.
      *
+     * @param bool $withExperts
      * @return Collection
      */
-    public function getCategoriesWithSubcategoriesAndExperts(): Collection
+    public function getCategoriesWithSubcategories(bool $withExperts = false): Collection
     {
-        // Fetch categories that have associated subcategories and experts
-        return Category::whereHas('subCategories') // Ensure the category has subcategories
-        ->with('subCategories')               // Load the subcategories relationship
-        ->whereHas('experts')                 // Ensure the category has associated experts
-        ->get();                              // Retrieve the results
+        $query = Category::whereHas('subCategories') // Ensure the category has subcategories
+        ->with('subCategories');               // Load the subcategories relationship
+
+        if ($withExperts) {
+            $query->whereHas('experts');           // Optionally ensure the category has associated experts
+        }
+
+        return $query->get();                       // Retrieve the results
     }
 }
