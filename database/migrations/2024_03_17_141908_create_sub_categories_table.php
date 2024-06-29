@@ -17,7 +17,6 @@ return new class extends Migration
             $table->string('image')->nullable();
             $table->string('description')->nullable();
             $table->bigInteger('experts_number')->default(0);
-            $table->bigInteger('experiences_number')->default(0);
             $table->boolean('active')->default(1);
             $table->tinyInteger('priority')->default(0);
             $table->foreignId('category_id')->constrained('categories')->onDelete('cascade');

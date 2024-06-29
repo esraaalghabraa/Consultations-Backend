@@ -18,7 +18,6 @@ return new class extends Migration
             $table->text('description')->nullable();
             $table->bigInteger('experts_number')->default(0);
             $table->bigInteger('sub_categories_number')->default(0);
-            $table->bigInteger('experiences_number')->default(0);
             $table->boolean('active')->default(1);
             $table->tinyInteger('priority')->default(0);
             $table->softDeletes();
