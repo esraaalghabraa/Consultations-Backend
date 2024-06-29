@@ -4,17 +4,22 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Laravel\Sanctum\HasApiTokens;
 
-class Expert extends Authenticatable
+class Expert extends Model
 {
-    use HasApiTokens, HasFactory, Notifiable, SoftDeletes;
+    use HasFactory, Notifiable, SoftDeletes;
 
     protected $guarded = [];
-    protected $hidden = ['password', 'remember_token', 'pivot', 'otp', 'is_complete_data', 'email_verified_at', 'category_id', 'deleted_at', 'created_at', 'updated_at'];
+    protected $hidden = ['deleted_at', 'created_at', 'updated_at'];
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
 
     public function subCategories()
     {
@@ -26,29 +31,21 @@ class Expert extends Authenticatable
         return $this->hasMany(ExpertDate::class);
     }
 
+    public function workTimes()
+    {
+        return $this->hasMany(WorkTime::class);
+    }
+
     public function appointments()
     {
         return $this->hasMany(Appointment::class);
     }
 
-    public function experiences()
-    {
-        return $this->belongsToMany(Experience::class, 'expert_experiences');
-    }
 
-    public function communicationTypes()
-    {
-        return $this->belongsToMany(CommunicationType::class, 'expert_communications');
-    }
 
-    public function users()
+    public function communicationTypes(): BelongsToMany
     {
-        return $this->belongsToMany(User::class, 'appointments');
-    }
-
-    public function followers()
-    {
-        return $this->belongsToMany(User::class, 'favorites');
+        return $this->belongsToMany(CommunicationType::class, 'communication_type_expert');
     }
 
     public function category()

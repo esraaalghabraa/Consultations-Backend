@@ -4,6 +4,8 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -22,6 +24,13 @@ class User extends Authenticatable implements LaratrustUser
     protected $hidden = [
         'password',
         'remember_token',
+        'email_verified_at',
+        'deleted_at',
+        'created_at',
+        'updated_at',
+        'otp',
+        'otp_last_sent_at',
+        'otp_resend_count',
     ];
 
     /**
@@ -37,15 +46,19 @@ class User extends Authenticatable implements LaratrustUser
         ];
     }
 
+    public function expert(): HasOne
+    {
+        return $this->hasOne(Expert::class);
+    }
+
+    public function followers(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'followers', 'expert_id', 'follower_id');
+    }
 
     public function appointments()
     {
         return $this->hasMany(Appointment::class);
-    }
-
-    public function experts()
-    {
-        return $this->belongsToMany(Expert::class, 'appointments');
     }
 
     public function favoriteExperts()
