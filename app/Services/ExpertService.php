@@ -6,6 +6,7 @@ use App\Models\Expert;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 
 class ExpertService
@@ -21,8 +22,10 @@ class ExpertService
         // Build the query based on request parameters
         $expertsQuery = $this->buildExpertQuery($request);
 
+        $relations = $this->getDetailsExpert();
+
         // Execute the query with pagination
-        $experts = $this->executeQuery($expertsQuery, $request);
+        $experts = $this->getWithPaginate($expertsQuery, $request, $relations);
 
         // Format the expert dates for the response
         return $this->formatExpertDates($experts);
@@ -81,26 +84,65 @@ class ExpertService
     /**
      * Execute the query with pagination and eager loading.
      *
-     * @param Builder $query
+     * @param $query
      * @param Request $request
+     * @param array $relations
      * @return mixed
      */
-    private function executeQuery($query, Request $request)
+    private function getWithPaginate($query, Request $request, array $relations = [])
     {
         // Set the limit and page for pagination
-        $limit = $request->limit ? $request->limit : 10;
-        $page = $request->page ? $request->page : null;
+        $limit = $request->limit ?? 10;
+        $page = $request->page ?? null;
 
         // Execute the query with the specified relations
-        return $query->with([
+        return $query->with($relations)->paginate($limit, ['*'], 'page', $page);
+    }
+
+    /**
+     * Get relationships to load for experts
+     *
+     * @return string[]
+     */
+    public function getDetailsExpert()
+    {
+        // Define the relationships to load for experts
+        return [
+            'category:id,name',
             'workTimes.day',
+            'workTimes.startTime',
+            'workTimes.endTime',
             'expertDates.day',
             'expertDates.hour',
             'subCategories:id,name',
-            'communicationTypes'
-        ])->paginate($limit, ['*'], 'page', $page);
+            'communicationTypes',
+            'followers'
+        ];
     }
 
+    /**
+     * Get expert by expert identifier with details
+     *
+     * @param $id
+     * @return Builder|Builder[]|Collection|Model|null
+     */
+    public function getExpert($id)
+    {
+        $relations = $this->getDetailsExpert();
+
+        return Expert::with($relations)->find($id);
+    }
+
+    public function updateExpert($expert, $request)
+    {
+        $expert->update([
+            'about' => $request->about,
+            'address' => $request->address,
+            'category_id' => $request->category_id,
+            'min_cost' => $request->min_cost,
+            'max_cost' => $request->max_cost,
+        ]);
+    }
     /**
      * Format the dates for each expert for the response.
      *
