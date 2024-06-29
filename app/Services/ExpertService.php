@@ -47,8 +47,6 @@ class ExpertService
                         $query->where('name', 'like', '%' . $searchQuery . '%');
                     })->orWhereHas('subCategories', function ($query) use ($searchQuery) {
                         $query->where('name', 'like', '%' . $searchQuery . '%');
-                    })->orWhereHas('experiences', function ($query) use ($searchQuery) {
-                        $query->where('name', 'like', '%' . $searchQuery . '%');
                     });
             });
         }

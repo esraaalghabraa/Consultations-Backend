@@ -18,11 +18,6 @@ class SubCategory extends Model
         return $this->belongsTo(Category::class);
     }
 
-    public function experiences()
-    {
-        return $this->hasMany(Experience::class);
-    }
-
     public function experts()
     {
         return $this->belongsToMany(Expert::class, 'sub_category_experts');
